@@ -6,10 +6,12 @@ import com.google.common.io.Files;
 
 import eu.the5zig.reconnect.api.ServerReconnectEvent;
 import eu.the5zig.reconnect.net.ReconnectBridge;
+import eu.the5zig.reconnect.util.Utils;
 import net.md_5.bungee.ServerConnection;
 import net.md_5.bungee.UserConnection;
 import net.md_5.bungee.api.ChatColor;
 import net.md_5.bungee.api.ProxyServer;
+import net.md_5.bungee.api.event.ServerKickEvent;
 import net.md_5.bungee.api.event.ServerSwitchEvent;
 import net.md_5.bungee.api.plugin.Listener;
 import net.md_5.bungee.api.plugin.Plugin;
@@ -25,6 +27,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
 public class Reconnect extends Plugin implements Listener {
@@ -139,6 +142,29 @@ public class Reconnect extends Plugin implements Listener {
 		// Cancel the reconnect task (if any exist) and clear title and action bar.
 		if (isReconnecting(user.getUniqueId())) {
 			cancelReconnectTask(user.getUniqueId());
+		}
+	}
+	
+	//Aipa Start
+	@SuppressWarnings("deprecation")
+	@EventHandler
+	public void onKick(ServerKickEvent event) {
+		if (event.getKickReason().contains("Server is still starting! Please wait before reconnecting.")) {
+			this.getLogger().info("Forge isn't ready... reconnecting again...");
+			event.setCancelled(true);
+			event.setCancelServer(null);
+			
+			UserConnection user = (UserConnection) event.getPlayer();
+			ServerConnection server = user.getServer();
+			
+			Utils.scheduleAsync(this, new Runnable() {
+
+				@Override
+				public void run() {
+					reconnectIfOnline(user, server);
+				}
+				
+			}, 5, TimeUnit.SECONDS);
 		}
 	}
 
